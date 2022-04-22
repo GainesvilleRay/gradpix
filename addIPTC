@@ -1,0 +1,72 @@
+from iptcinfo3 import IPTCInfo
+import os
+import pandas as pd
+import shutil
+
+# set of functions that:
+# - takes excel table as index file for image filenames and students names
+#     and converts that to a dictionary
+# - takes that dictionary and inserts names and other info into image files
+#    as IPTC fields
+# - renames and saves those image files to a new directory
+
+def get_names(index_file):
+    
+    """
+    Take index file, drop unneeded cols, combine first + middle names,
+    combine full name, create dict
+    param: path to file with index info
+    return: index_dict
+    """
+    
+    df = pd.read_csv(index_file, sep="\t", usecols=[2,4,5,6], names=['image', 'last', 'first', 'middle'])
+    df['first_name'] = df['first'] + " " + df['middle']
+    df = df.drop(df.columns[[3, 4]], axis=1)
+    df['last'] = df['last'].str.strip()
+    df['first'] = df['first'].str.strip()
+    df['fullname'] = df['first'] + " " + df['last']
+    index_dict = pd.Series(df.fullname.values,index=df.image).to_dict()
+    return index_dict
+
+def add_iptc(imagefile, source_dir, new_dir, index_dict):
+    
+    """
+    Takes an image file, makes copy of it, adds IPTC data, saves new copy to separate directory.
+    param: imagefile from loop
+    param: source_dir as location of image files from a given school
+    param: new_dir where image files with IPTC data should go
+    param: index_dict to get values for IPTC fields
+    """
+    
+    trim = imagefile.split('.')[0]
+    newimage = trim + 'meta.jpg'
+    info = IPTCInfo(imagefile)
+    info.save_as(newimage)
+    info = IPTCInfo(newimage, force=True)
+    info['caption/abstract'] = index_dict[imagefile]
+    info['object name'] = imagefile
+    info['by-line'] = 'SWI Photographers'
+    info['source'] = 'ntgs'
+    info.save() 
+    shutil.move(os.path.join(source_dir, newimage), os.path.join(new_dir, newimage))
+
+if __name__ == "__main__":
+    #List school names with associated directories
+    new_dir = 'williston_new'
+    schoolname = 'WILLISTON'
+    index_file = 'C:\\Users\\DRay1\\Projects\\gradpix\\' + schoolname + '\\YB_CD_IMAGES\\VOL1\\Index.txt'
+    
+    # run this function separately for each school, 
+    # getting a dict with image file names as key and name as value
+    index_dict = get_names(index_file)
+    
+    # with the index_dict add IPTC info to imagefiles and save in new directory
+    cwd = 'C:\\Users\\DRay1\\Projects\\gradpix\\'
+    source_dir = cwd
+    #source_dir = cwd + schoolname +'\\YB_CD_IMAGES\\VOL1\\12\\'
+    #imagefile = os.fsdecode(cwd + file)
+
+    for imagefile in os.listdir(source_dir):
+        #filename = os.fsdecode(file)
+        if imagefile.endswith('.JPG'):
+            add_iptc(imagefile, source_dir, new_dir,  index_dict)
