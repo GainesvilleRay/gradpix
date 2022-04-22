@@ -1,0 +1,19 @@
+import os
+
+# make directory
+
+# Directory
+directory = "test2"
+  
+# Parent Directory path
+parent_dir = "C:\\Users\\DRay1\\Projects\\gradpix"
+  
+# Path
+path = os.path.join(parent_dir, directory)
+  
+# mode
+mode = 0o666
+
+# Create the directory
+os.mkdir(path, mode)
+print("Directory '%s' created" %directory)
