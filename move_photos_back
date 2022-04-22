@@ -1,0 +1,11 @@
+import os
+import shutil
+
+### move files back after upload to Presto
+source_dir = ''
+destination_dir = ''
+files = os.listdir(source_dir)
+
+for f in files:
+    shutil.move(source_dir + '\\' + f, destination_dir)
+    print('moving: ' + f)
