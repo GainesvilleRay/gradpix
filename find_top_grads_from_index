@@ -1,0 +1,66 @@
+from iptcinfo3 import IPTCInfo
+import os
+import pandas as pd
+import shutil
+
+# Set of functions to take list of top grads from a given school
+# and move their image files to a new folder. Requires an excel file
+# with a column of names of top grads from a given school.
+
+def get_names(index_file):
+    
+    """
+    Same function as above that creates a dictionary of image files and student names
+    but that dictionary will be used now as reference for top grads
+    
+    Take index file, drop unneeded cols, combine first + middle names,
+    combine full name, create dict
+    
+    param: path to file with index info
+    return: index_dict
+    """
+    
+    df = pd.read_csv(index_file, sep="\t", usecols=[2,4,5,6], names=['image', 'last', 'first', 'middle'])
+    df['first_name'] = df['first'] + " " + df['middle']
+    df = df.drop(df.columns[[3, 4]], axis=1)
+    df['last'] = df['last'].str.strip()
+    df['first'] = df['first'].str.strip()
+    df['fullname'] = df['first'] + " " + df['last']
+    index_dict = pd.Series(df.fullname.values,index=df.image).to_dict()
+    return index_dict
+
+# These change for each school
+source_dir = 'trenton_new' # where photos of all grads reside
+schoolname = 'TRENTON' # source directory for each school
+index_file = 'C:\\Users\\DRay1\\Projects\\gradpix\\sourcefiles\\' + schoolname + '\\YB_CD_IMAGES\\VOL1\\Index.txt'
+topgrads = 'ghstop.xlsx' # Excel file with a column of names of top grads
+    
+# run this function separately for each school, 
+# getting a dict with image file names as key and name as value
+index_dict = get_names(index_file)
+
+# Make a list of names of top grads
+df = pd.read_excel(topgrads, header=None) # Excel file with a column of names of top grads
+t = df.to_numpy().tolist() # Creates list of lists
+topgradnames_list = [item for sublist in t for item in sublist] # Flatten to single list
+
+#topgradnames_list = [] # Alternately, add short list of names
+
+# Get list of image files associated with list of names of top grads
+topgradphotos_list = [key for key, value in index_dict.items() if value in topgradnames_list] # create list of image filenames for top grads 
+t_list = [x.replace('.JPG', 'meta.jpg') for x in topgradphotos_list]
+
+files = os.listdir(source_dir) # Where photos of all grads from a given school reside.
+destination_dir = 'topten' # Where the top grad photos will be placed
+
+# Iterate through all photo files to select top grad photos and move them to a separate directory.
+for f in files:
+    if f in t_list:
+        shutil.move(source_dir + '\\' + f, destination_dir)
+        print('moving: ' + f)
+  
+# Names in top grad list for which no photo matches
+all_list = [value for key, value in index_dict.items()] # list of names for which we have photos
+res = [x for x in topgradnames_list + all_list if x not in all_list] # filter top grads against all grads
+print("The top grads with missing photos are:\n")
+print(*res, sep = "\n")
